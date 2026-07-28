@@ -1,0 +1,13 @@
+{
+    "display_name": "Kimi Thinking Prefill",
+    "loading_order": 95,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Rurijian",
+    "version": "1.0.0",
+    "homePage": "https://github.com/Rurijian/KimiThinkingPrefill",
+    "description": "Client-side equivalent of the kimi-k3-jb server patch: injects a reasoning_content prefill (partial assistant message) for Kimi/Moonshot models, with an editable prefill field.",
+    "auto_update": true
+}
