@@ -5,10 +5,14 @@
 // request payload before it leaves the browser:
 //
 //   1. Patch parity: if the last message is an assistant message whose content
-//      starts with <think>...</think>, the think block is moved into
-//      `reasoning_content` and the message is flagged `partial: true`
+//      starts with a leading think block (see THINK_REGEX), the block is moved
+//      into `reasoning_content` and the message is flagged `partial: true`
 //      (identical transform to the patched addAssistantPrefix).
-//   2. Injection: if the last message is NOT an assistant message and the user
+//   2. Re-attach: re-populates `reasoning_content` on every prior assistant
+//      message from the stored `extra.reasoning` chat field, so providers that
+//      require prior reasoning to be passed back do not return a 400. Gated by
+//      the `send_all_thinking` setting.
+//   3. Injection: if the last message is NOT an assistant message and the user
 //      has configured a reasoning prefill below, a trailing assistant message
 //      { role: 'assistant', content: '', reasoning_content: prefill, partial: true }
 //      is appended, so no preset-side prefill prompt is needed.
@@ -36,6 +40,9 @@ const defaultSettings = {
     // reasoning.exclude=false for OpenRouter).
     force_thinking: true,
     debug_log: false,
+
+    // Toggle if we should also send all assistant messages with reasoning included.
+    send_all_thinking: true
 };
 
 // Same regex as the patched prompt-converters.js addAssistantPrefix().
@@ -108,6 +115,47 @@ function applyThinkTransform(message) {
 }
 
 /**
+ * Re-attaches stored reasoning (extra.reasoning) from past assistant chat
+ * messages to the matching role:'assistant' entries in the outgoing messages
+ * array. SillyTavern stores reasoning at chat[i].extra.reasoning but does not
+ * forward it to the API on its own.
+ *
+ * Matching strategy: non-user chat messages map 1:1, in order, to the
+ * role:'assistant' entries in the outgoing payload. System prompts, summaries
+ * and dialogue examples are all role:'system' so they do not perturb the
+ * assistant count. The pairing uses Math.min so a trailing preset prefill
+ * (which has no chat counterpart) is simply left unpaired.
+ * @param {object} generateData Outgoing request payload
+ * @returns {number} How many messages had reasoning attached
+ */
+function attachPriorReasoning(generateData) {
+    const settings = getSettings();
+    if (!settings.send_all_thinking) return 0;
+
+    const chat = SillyTavern.getContext().chat;
+    if (!Array.isArray(chat)) return 0;
+
+    const chatAssistantMsgs = chat.filter(m => m && !m.is_user);
+    const outgoingAssistantMsgs = generateData.messages.filter(m => m && m.role === 'assistant');
+
+    let attached = 0;
+    const count = Math.min(chatAssistantMsgs.length, outgoingAssistantMsgs.length);
+    for (let i = 0; i < count; i++) {
+        const reason = chatAssistantMsgs[i]?.extra?.reasoning;
+        if (reason && typeof reason === 'string' && reason.trim() && !outgoingAssistantMsgs[i].reasoning_content) {
+            outgoingAssistantMsgs[i].reasoning_content = reason;
+            attached++;
+        }
+    }
+
+    if (attached > 0) {
+        ensureThinkingEnabled(generateData);
+        debugLog(`Attached reasoning_content to ${attached} prior assistant message(s).`);
+    }
+    return attached;
+}
+
+/**
  * Core handler. Mutates the outgoing request payload.
  * @param {object} generateData Payload built by createGenerationParameters()
  */
@@ -137,6 +185,12 @@ function onChatCompletionSettingsReady(generateData) {
             debugLog('Skipped: tools present.');
             return;
         }
+
+        // Re-attach stored reasoning_content from prior assistant messages so
+        // providers that require it keep working
+        // across turns. Runs after the skip gates and before the trailing
+        // message transform/injection so the prefill is never double-assigned.
+        attachPriorReasoning(generateData);
 
         const type = lastGenerationType;
         const last = messages.at(-1);
@@ -207,6 +261,7 @@ jQuery(async () => {
     bindSetting('#ktf_model_filter', 'model_filter');
     bindSetting('#ktf_force_thinking', 'force_thinking', { isCheckbox: true });
     bindSetting('#ktf_debug_log', 'debug_log', { isCheckbox: true });
+    bindSetting('#ktf_send_all_thinking', 'send_all_thinking', { isCheckbox: true})
 
     eventSource.on(event_types.CHAT_COMPLETION_SETTINGS_READY, onChatCompletionSettingsReady);
     eventSource.on(event_types.GENERATION_STARTED, onGenerationStarted);
