@@ -42,7 +42,8 @@ Hooks `CHAT_COMPLETION_SETTINGS_READY` and rewrites the outgoing request payload
 
 Extensions menu → **Kimi Thinking Prefill**:
 
-- **Enable thinking prefill** — master toggle.
+- **Enable thinking prefill** — toggle for the prefill features (transform + injection).
+  Independent of the re-attach toggle below; either works without the other.
 - **reasoning_content prefill** — the thinking text to prefill (plain text, no `<think>` tag needed).
 - **Model filter** — comma-separated substrings matched against the model id.
 - **Force thinking on for prefilled requests** (default: on) — sets `include_reasoning` on requests

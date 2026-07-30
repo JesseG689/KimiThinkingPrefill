@@ -162,7 +162,9 @@ function attachPriorReasoning(generateData) {
 function onChatCompletionSettingsReady(generateData) {
     try {
         const settings = getSettings();
-        if (!settings.enabled) return;
+        // The two features are independent: the re-attach toggle works even
+        // when the thinking prefill is disabled.
+        if (!settings.enabled && !settings.send_all_thinking) return;
         if (!generateData || !Array.isArray(generateData.messages)) return;
 
         // Model gate (patch used model.includes('moonshot'); this is configurable).
@@ -191,6 +193,9 @@ function onChatCompletionSettingsReady(generateData) {
         // across turns. Runs after the skip gates and before the trailing
         // message transform/injection so the prefill is never double-assigned.
         attachPriorReasoning(generateData);
+
+        // Prefill features (transform + injection) are gated separately.
+        if (!settings.enabled) return;
 
         const type = lastGenerationType;
         const last = messages.at(-1);
