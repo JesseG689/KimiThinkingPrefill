@@ -42,7 +42,7 @@ const defaultSettings = {
     debug_log: false,
 
     // Toggle if we should also send all assistant messages with reasoning included.
-    send_all_thinking: false
+    send_all_thinking: false,
 };
 
 // Same regex as the patched prompt-converters.js addAssistantPrefix().
