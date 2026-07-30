@@ -23,6 +23,12 @@ Hooks `CHAT_COMPLETION_SETTINGS_READY` and rewrites the outgoing request payload
    `addAssistantPrefix`. This means preset-style prefills like
    `<think>I should continue the story.` keep working unchanged.
 
+3. **Preserved thinking (optional)** — re-attaches each prior assistant message's stored reasoning
+   (`chat[i].extra.reasoning`) as `reasoning_content` in the outgoing payload, so Kimi's
+   [preserved-thinking behavior](https://platform.kimi.ai/docs/guide/use-thinking-models) works in
+   multi-turn chats. Off by default; requires the SillyTavern **Show thoughts** toggle to be on
+   (reasoning is only persisted then). Note: prior reasoning is billed as input tokens.
+
 ## Guards (mirroring the patch)
 
 - Only runs when the current model id matches the configurable filter (default `kimi,moonshot`,
@@ -42,6 +48,8 @@ Extensions menu → **Kimi Thinking Prefill**:
 - **Force thinking on for prefilled requests** (default: on) — sets `include_reasoning` on requests
   this extension modifies. **Required**: with thinking disabled the model continues the seeded
   `reasoning_content` with reply text and never reasons (reply shows up inside the reasoning panel).
+- **Send all prior assistant reasoning back to the API** (default: off) — the preserved-thinking
+  feature above. Pairs chat messages to outgoing assistant messages 1:1 (system messages excluded).
 - **Log decisions to browser console** — debug output for each guarded decision.
 
 ## Verification
