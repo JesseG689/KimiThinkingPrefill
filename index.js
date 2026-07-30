@@ -42,7 +42,7 @@ const defaultSettings = {
     debug_log: false,
 
     // Toggle if we should also send all assistant messages with reasoning included.
-    send_all_thinking: true
+    send_all_thinking: false
 };
 
 // Same regex as the patched prompt-converters.js addAssistantPrefix().
@@ -135,7 +135,7 @@ function attachPriorReasoning(generateData) {
     const chat = SillyTavern.getContext().chat;
     if (!Array.isArray(chat)) return 0;
 
-    const chatAssistantMsgs = chat.filter(m => m && !m.is_user);
+    const chatAssistantMsgs = chat.filter(m => m && !m.is_user && !m.is_system);
     const outgoingAssistantMsgs = generateData.messages.filter(m => m && m.role === 'assistant');
 
     let attached = 0;
@@ -261,7 +261,7 @@ jQuery(async () => {
     bindSetting('#ktf_model_filter', 'model_filter');
     bindSetting('#ktf_force_thinking', 'force_thinking', { isCheckbox: true });
     bindSetting('#ktf_debug_log', 'debug_log', { isCheckbox: true });
-    bindSetting('#ktf_send_all_thinking', 'send_all_thinking', { isCheckbox: true})
+    bindSetting('#ktf_send_all_thinking', 'send_all_thinking', { isCheckbox: true });
 
     eventSource.on(event_types.CHAT_COMPLETION_SETTINGS_READY, onChatCompletionSettingsReady);
     eventSource.on(event_types.GENERATION_STARTED, onGenerationStarted);
