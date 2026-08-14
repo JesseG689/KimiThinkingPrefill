@@ -135,7 +135,7 @@ function attachPriorReasoning(generateData) {
     const chat = SillyTavern.getContext().chat;
     if (!Array.isArray(chat)) return 0;
 
-    const chatAssistantMsgs = chat.filter(m => m && !m.is_user && !m.is_system);
+    const chatAssistantMsgs = chat.filter(m => m && !m.is_user && !m.is_system && !m.extra?.isSmallSys);
     const outgoingAssistantMsgs = generateData.messages.filter(m => m && m.role === 'assistant');
 
     let attached = 0;
