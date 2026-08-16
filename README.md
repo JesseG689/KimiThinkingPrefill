@@ -29,6 +29,18 @@ Hooks `CHAT_COMPLETION_SETTINGS_READY` and rewrites the outgoing request payload
    multi-turn chats. Off by default; requires the SillyTavern **Show thoughts** toggle to be on
    (reasoning is only persisted then). Note: prior reasoning is billed as input tokens.
 
+### Summaryception v21 / Append Only compatibility
+
+When preserved thinking is enabled, `extra.isSmallSys` chat records are excluded from assistant
+message matching. This is important for Summaryception v21 Append Only mode, where baked `SC-WI`
+narrator records are stored as non-user/non-system chat messages but are not real assistant replies.
+Treating those records as assistant replies can shift the positional pairing and attach saved Kimi
+reasoning to the wrong outgoing assistant message.
+
+This compatibility filter is intentionally generic (`!m.extra?.isSmallSys`) rather than tied to a
+specific extension. Older/original Summaryception releases that do not create `isSmallSys` records
+are unaffected.
+
 ## Guards (mirroring the patch)
 
 - Only runs when the current model id matches the configurable filter (default `kimi,moonshot`,
@@ -50,7 +62,8 @@ Extensions menu → **Kimi Thinking Prefill**:
   this extension modifies. **Required**: with thinking disabled the model continues the seeded
   `reasoning_content` with reply text and never reasons (reply shows up inside the reasoning panel).
 - **Send all prior assistant reasoning back to the API** (default: off) — the preserved-thinking
-  feature above. Pairs chat messages to outgoing assistant messages 1:1 (system messages excluded).
+  feature above. Pairs real assistant chat replies to outgoing assistant messages 1:1; user,
+  system, and `extra.isSmallSys` records are excluded from the chat-side pairing.
 - **Log decisions to browser console** — debug output for each guarded decision.
 
 ## Verification
@@ -67,4 +80,6 @@ with request logging), the final message should look like:
 
 - Works with the direct Moonshot source, OpenRouter (Moonshot provider), and Custom endpoints —
   anywhere the model id matches the filter and the API honors `partial`/`reasoning_content`.
+- Summaryception v21 Append Only `SC-WI` narrator records marked with `extra.isSmallSys` are ignored
+  by preserved-thinking message matching so reasoning stays aligned with real assistant replies.
 - The server patch is *not* required; do not run both (double transforms are harmless but pointless).
