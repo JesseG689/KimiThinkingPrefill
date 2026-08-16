@@ -120,10 +120,14 @@ function applyThinkTransform(message) {
  * array. SillyTavern stores reasoning at chat[i].extra.reasoning but does not
  * forward it to the API on its own.
  *
- * Matching strategy: non-user chat messages map 1:1, in order, to the
- * role:'assistant' entries in the outgoing payload. System prompts, summaries
- * and dialogue examples are all role:'system' so they do not perturb the
- * assistant count. The pairing uses Math.min so a trailing preset prefill
+ * Matching strategy: real assistant chat replies map 1:1, in order, to the
+ * role:'assistant' entries in the outgoing payload. User, system, and
+ * extra.isSmallSys messages are excluded. The isSmallSys exclusion is
+ * important for extensions such as Summaryception v21, whose Append Only
+ * SC-WI narrator records are stored as non-user/non-system chat messages but
+ * are not actual assistant replies.
+ *
+ * The pairing uses Math.min so a trailing preset prefill
  * (which has no chat counterpart) is simply left unpaired.
  * @param {object} generateData Outgoing request payload
  * @returns {number} How many messages had reasoning attached
