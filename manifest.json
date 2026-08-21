@@ -1,13 +1,13 @@
 {
-    "display_name": "Kimi Thinking Prefill",
+    "display_name": "Silly Preserved Reasoning",
     "loading_order": 95,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
-    "author": "Rurijian",
-    "version": "1.0.1",
-    "homePage": "https://github.com/Rurijian/KimiThinkingPrefill",
-    "description": "Client-side equivalent of the kimi-k3-jb server patch: injects a reasoning_content prefill (partial assistant message) for Kimi/Moonshot models, with an editable prefill field.",
+    "author": "Rurijian, JesseG689",
+    "version": "2.0.0",
+    "homePage": "https://github.com/JesseG689/SillyPreservedReasoning",
+    "description": "Preserves assistant reasoning_content across SillyTavern turns for Kimi/Moonshot while retaining optional Kimi reasoning prefill support.",
     "auto_update": true
 }

@@ -1,85 +1,102 @@
-# Kimi Thinking Prefill
+# Silly Preserved Reasoning
 
-Client-side SillyTavern extension implementing the
-[kimi-k3-jb patch](https://rentry.org/kimi-k3-jb) (`reasoning_content` thinking prefill for
-Kimi/Moonshot models) without modifying any server files.
+A SillyTavern extension for preserving Kimi/Moonshot reasoning across multi-turn chats while retaining the optional partial-reasoning prefill behavior from Kimi Thinking Prefill.
 
-## What it does
+## Features
 
-Hooks `CHAT_COMPLETION_SETTINGS_READY` and rewrites the outgoing request payload:
+### Preserved reasoning
 
-1. **Injection** — when the prompt does not end on an assistant message, appends:
+When **Send all prior assistant reasoning back to the API** is enabled, the extension:
 
-   ```json
-   { "role": "assistant", "content": "", "reasoning_content": "<your prefill>", "partial": true }
-   ```
+1. Collects real assistant chat messages from SillyTavern.
+2. Excludes user, system, and `extra.isSmallSys` records.
+3. Pairs them in order with outgoing `role: "assistant"` messages.
+4. Re-attaches each stored `extra.reasoning` as `reasoning_content` without trimming, rewriting, or reordering the stored string.
 
-   The model then *continues thinking* from the prefilled reasoning, per the Moonshot API's
-   documented partial-prefill behavior.
+The default preserved-reasoning model filter is:
 
-2. **Preset parity (patch transform)** — if the prompt already ends on an assistant message
-   whose content starts with `<think>`, the think block is moved into `reasoning_content`
-   and the message is flagged `partial: true` — the exact transform the server patch adds to
-   `addAssistantPrefix`. This means preset-style prefills like
-   `<think>I should continue the story.` keep working unchanged.
+```text
+kimi,moonshot
+```
 
-3. **Preserved thinking (optional)** — re-attaches each prior assistant message's stored reasoning
-   (`chat[i].extra.reasoning`) as `reasoning_content` in the outgoing payload, so Kimi's
-   [preserved-thinking behavior](https://platform.kimi.ai/docs/guide/use-thinking-models) works in
-   multi-turn chats. Off by default; requires the SillyTavern **Show thoughts** toggle to be on
-   (reasoning is only persisted then). Note: prior reasoning is billed as input tokens.
+Prior reasoning is billed as input tokens. SillyTavern must have stored the reasoning on the original assistant message for the extension to send it on later turns.
 
-### Summaryception v21 / Append Only compatibility
+### Summaryception compatibility
 
-When preserved thinking is enabled, `extra.isSmallSys` chat records are excluded from assistant
-message matching. This is important for Summaryception v21 Append Only mode, where baked `SC-WI`
-narrator records are stored as non-user/non-system chat messages but are not real assistant replies.
-Treating those records as assistant replies can shift the positional pairing and attach saved Kimi
-reasoning to the wrong outgoing assistant message.
+`extra.isSmallSys` chat records are excluded from assistant-message pairing. This is important for Summaryception Append Only mode, where baked narrator records may be stored as non-user/non-system chat messages but are not real assistant replies.
 
-This compatibility filter is intentionally generic (`!m.extra?.isSmallSys`) rather than tied to a
-specific extension. Older/original Summaryception releases that do not create `isSmallSys` records
-are unaffected.
+The compatibility filter is intentionally generic:
 
-## Guards (mirroring the patch)
+```js
+m && !m.is_user && !m.is_system && !m.extra?.isSmallSys
+```
 
-- Only runs when the current model id matches the configurable filter (default `kimi,moonshot`,
-  covers `moonshotai/kimi-k3` on OpenRouter and `kimi-k3`/`kimi-k2-*` on the direct Moonshot API).
-- Skipped when JSON schema / structured output is active.
-- Skipped when tools/function calling are in play.
-- Injection only on normal/regenerate/swipe generations (never quiet prompts or impersonation);
-  the `<think>` transform additionally applies on Continue.
+### Kimi/Moonshot reasoning prefill
+
+For model IDs matching the **Prefill model filter** (default `kimi,moonshot`), the extension can:
+
+- transform a leading `<think>...</think>` block on a trailing assistant message into `reasoning_content` with `partial: true`; or
+- inject a configured partial assistant `reasoning_content` prefill on normal, regenerate, and swipe generations.
+
+Continue generations retain the leading `<think>` transformation. Quiet and impersonate generations do not receive an injected prefill.
+
+Tools and JSON schema requests block only the partial-prefill behavior. Historical reasoning preservation remains independent and may still run when those features are present.
 
 ## Settings
 
-Extensions menu → **Kimi Thinking Prefill**:
+Extensions menu → **Silly Preserved Reasoning**:
 
-- **Enable thinking prefill** — toggle for the prefill features (transform + injection).
-  Independent of the re-attach toggle below; either works without the other.
-- **reasoning_content prefill** — the thinking text to prefill (plain text, no `<think>` tag needed).
-- **Model filter** — comma-separated substrings matched against the model id.
-- **Force thinking on for prefilled requests** (default: on) — sets `include_reasoning` on requests
-  this extension modifies. **Required**: with thinking disabled the model continues the seeded
-  `reasoning_content` with reply text and never reasons (reply shows up inside the reasoning panel).
-- **Send all prior assistant reasoning back to the API** (default: off) — the preserved-thinking
-  feature above. Pairs real assistant chat replies to outgoing assistant messages 1:1; user,
-  system, and `extra.isSmallSys` records are excluded from the chat-side pairing.
-- **Log decisions to browser console** — debug output for each guarded decision.
+- **Send all prior assistant reasoning back to the API** — enables historical reasoning preservation.
+- **Preserved reasoning model filter** — comma-separated model ID substrings for historical reasoning.
+- **Enable Kimi/Moonshot thinking prefill** — enables the optional transform and injection behavior.
+- **reasoning_content prefill** — the partial reasoning text to inject.
+- **Prefill model filter** — comma-separated model ID substrings for partial prefill.
+- **Force thinking on for prefilled requests** — sets `include_reasoning` when a Kimi/Moonshot request is modified.
+- **Log decisions to browser console** — enables diagnostic logging.
+
+## Settings migration
+
+The extension's internal settings key is `SillyPreservedReasoning`.
+
+On first load, if existing `KimiThinkingPrefill` settings are found, they are copied non-destructively:
+
+- existing prefill settings and toggles are retained;
+- the old model filter becomes both the prefill and preserved-reasoning filters;
+- the legacy settings key is left untouched so rollback remains possible.
+
+The settings UI is loaded relative to `import.meta.url`, so the physical extension folder name does not affect `settings.html` loading.
+
+## Recommended preserved-reasoning setup
+
+For preserved reasoning without partial prefill:
+
+```text
+Enable Kimi/Moonshot thinking prefill: OFF
+Preserved reasoning model filter: kimi,moonshot
+Send all prior assistant reasoning back to the API: ON
+Log decisions: OFF
+```
 
 ## Verification
 
-Enable debug logging, generate, and check the browser console for
-`[KimiThinkingPrefill] Injected reasoning_content prefill: ...`. On the server side (ST terminal
-with request logging), the final message should look like:
+Temporarily enable debug logging and generate a turn. For historical reasoning you should see a browser-console message similar to:
 
-```json
-{ "role": "assistant", "content": "", "reasoning_content": "I should continue the story.", "partial": true }
+```text
+[SillyPreservedReasoning] Attached reasoning_content to 12 prior assistant message(s).
 ```
 
-## Notes
+For partial prefill you should see:
 
-- Works with the direct Moonshot source, OpenRouter (Moonshot provider), and Custom endpoints —
-  anywhere the model id matches the filter and the API honors `partial`/`reasoning_content`.
-- Summaryception v21 Append Only `SC-WI` narrator records marked with `extra.isSmallSys` are ignored
-  by preserved-thinking message matching so reasoning stays aligned with real assistant replies.
-- The server patch is *not* required; do not run both (double transforms are harmless but pointless).
+```text
+[SillyPreservedReasoning] Injected Kimi/Moonshot reasoning_content prefill: ...
+```
+
+## Provider notes
+
+- Direct Moonshot/Kimi and compatible proxies must accept `reasoning_content` for preservation to work.
+- Proxy behavior is provider-dependent; confirm that the selected provider forwards the field as expected.
+- Claude is intentionally not handled because its native thinking uses structured signed blocks.
+
+## Credits
+
+Based on the original **Kimi Thinking Prefill** extension by Rurijian and its Kimi reasoning-prefill flow.
