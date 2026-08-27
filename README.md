@@ -21,6 +21,18 @@ kimi,moonshot
 
 Prior reasoning is billed as input tokens. SillyTavern must have stored the reasoning on the original assistant message for the extension to send it on later turns.
 
+### Experimental GLM compatibility
+
+Some users have reported that historical reasoning reattachment works with GLM models when `glm` is added to the **Preserved reasoning model filter**. You may try:
+
+```text
+kimi,moonshot,glm
+```
+
+This is experimental, has received very limited testing, and is not guaranteed to work. The `main` branch only re-attaches stored `reasoning_content`; it does not send GLM-specific preserved-thinking controls. A successful result may depend on defaults supplied by the selected provider or endpoint. Direct standard Z.AI normally requires `clear_thinking:false`, while proxies and managed endpoints may behave differently.
+
+Do not add `glm` to the **Prefill model filter**. Kimi/Moonshot partial-reasoning prefill is not intended for GLM.
+
 ### Summaryception (v22) Append Only compatibility
 
 `extra.isSmallSys` chat records are excluded from assistant-message pairing. This is important for Summaryception Append Only mode, where baked narrator records may be stored as non-user/non-system chat messages but are not real assistant replies.
