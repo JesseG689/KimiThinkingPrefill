@@ -21,7 +21,7 @@ kimi,moonshot
 
 Prior reasoning is billed as input tokens. SillyTavern must have stored the reasoning on the original assistant message for the extension to send it on later turns.
 
-### Summaryception compatibility
+### Summaryception (v22) Append Only compatibility
 
 `extra.isSmallSys` chat records are excluded from assistant-message pairing. This is important for Summaryception Append Only mode, where baked narrator records may be stored as non-user/non-system chat messages but are not real assistant replies.
 
