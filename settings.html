@@ -8,7 +8,7 @@
         <div class="inline-drawer-content">
             <small class="ktf-hint">
                 Preserves historical assistant <code>reasoning_content</code> across turns for
-                Kimi/Moonshot models and retains optional partial-reasoning prefill.
+                Kimi/Moonshot and compatible GLM providers while retaining optional Kimi partial-reasoning prefill.
             </small>
 
             <hr>
@@ -28,9 +28,20 @@
             <div class="flex-container flexFlowColumn">
                 <label for="ktf_preserved_model_filter">Preserved reasoning model filter (comma-separated substrings)</label>
                 <input id="ktf_preserved_model_filter" class="text_pole" type="text" autocomplete="off"
-                    placeholder="kimi,moonshot">
-                <small>Default: Kimi/Moonshot model IDs.</small>
+                    placeholder="kimi,moonshot,glm">
+                <small>New-install default: Kimi/Moonshot and GLM model IDs. Existing saved filters are not changed.</small>
             </div>
+
+            <div class="flex-container">
+                <label class="flex-container">
+                    <input type="checkbox" id="ktf_glm_custom_clear_thinking">
+                    <small>Send <code>clear_thinking:false</code> for GLM Custom endpoints (experimental)</small>
+                </label>
+            </div>
+            <small class="ktf-hint">
+                Off by default. Adds native Z.AI <code>thinking</code> controls only to matching GLM requests
+                using SillyTavern's Custom source. Provider forwarding and cache behavior are not guaranteed.
+            </small>
 
             <hr>
             <b>Kimi / Moonshot reasoning prefill (optional)</b>

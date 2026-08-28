@@ -6,8 +6,8 @@
     "js": "index.js",
     "css": "style.css",
     "author": "Rurijian, JesseG689",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "homePage": "https://github.com/JesseG689/SillyPreservedReasoning",
-    "description": "Preserves assistant reasoning_content across SillyTavern turns for Kimi/Moonshot while retaining optional Kimi reasoning prefill support.",
+    "description": "Preserves assistant reasoning_content across SillyTavern turns for Kimi/Moonshot and compatible GLM providers while retaining optional Kimi reasoning prefill support.",
     "auto_update": true
 }

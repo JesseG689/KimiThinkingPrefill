@@ -1,6 +1,6 @@
 # Silly Preserved Reasoning
 
-A SillyTavern extension for preserving Kimi/Moonshot reasoning across multi-turn chats while retaining the optional partial-reasoning prefill behavior from Kimi Thinking Prefill.
+A SillyTavern extension for preserving Kimi/Moonshot and compatible GLM reasoning across multi-turn chats while retaining the optional partial-reasoning prefill behavior from Kimi Thinking Prefill.
 
 ## Features
 
@@ -16,20 +16,45 @@ When **Send all prior assistant reasoning back to the API** is enabled, the exte
 The default preserved-reasoning model filter is:
 
 ```text
-kimi,moonshot
+kimi,moonshot,glm
 ```
 
-Prior reasoning is billed as input tokens. SillyTavern must have stored the reasoning on the original assistant message for the extension to send it on later turns.
+This is the default only for genuinely new installations. Existing Silly Preserved Reasoning and legacy
+Kimi Thinking Prefill settings retain their saved filters exactly. Prior reasoning is billed as input tokens.
+SillyTavern must have stored the reasoning on the original assistant message for the extension to send it on later turns.
 
 ### Experimental GLM compatibility
 
-Some users have reported that historical reasoning reattachment works with GLM models when `glm` is added to the **Preserved reasoning model filter**. You may try:
+Z.AI documents Preserved Thinking as returning complete, unmodified historical `reasoning_content` in its
+original order. OpenRouter likewise accepts `reasoning_content` as an alias for historical reasoning. Limited
+community testing has reported behavioral differences with GLM 5.3 Flash, but this does not confirm every
+provider route, cache behavior, or refusal behavior.
+
+The **Preserved reasoning model filter** for new installations includes:
 
 ```text
 kimi,moonshot,glm
 ```
 
-This is experimental, has received very limited testing, and is not guaranteed to work. The `main` branch only re-attaches stored `reasoning_content`; it does not send GLM-specific preserved-thinking controls. A successful result may depend on defaults supplied by the selected provider or endpoint. Direct standard Z.AI normally requires `clear_thinking:false`, while proxies and managed endpoints may behave differently.
+This support is experimental and provider-dependent. Historical reattachment and the native Z.AI
+`clear_thinking:false` control are separate mechanisms. Direct standard Z.AI normally requires that control,
+while OpenRouter, Coding Plan, and compatible proxies may normalize or supply preserved-thinking behavior.
+
+For GLM models accessed through SillyTavern's **Custom** source, the optional setting
+**Send `clear_thinking:false` for GLM Custom endpoints (experimental)** adds this to the actual provider request:
+
+```json
+{
+  "thinking": {
+    "type": "enabled",
+    "clear_thinking": false
+  }
+}
+```
+
+The option defaults off for all users. It modifies only the per-request Custom Include Body and does not rewrite
+saved Custom settings. Hapuppy forwarding and cache reporting remain unconfirmed. The option does not patch
+SillyTavern and does not affect the built-in Z.AI or OpenRouter sources.
 
 Do not add `glm` to the **Prefill model filter**. Kimi/Moonshot partial-reasoning prefill is not intended for GLM.
 
@@ -60,6 +85,7 @@ Extensions menu → **Silly Preserved Reasoning**:
 
 - **Send all prior assistant reasoning back to the API** — enables historical reasoning preservation.
 - **Preserved reasoning model filter** — comma-separated model ID substrings for historical reasoning.
+- **Send `clear_thinking:false` for GLM Custom endpoints (experimental)** — opt-in native Z.AI request control for matching GLM models through the Custom source.
 - **Enable Kimi/Moonshot thinking prefill** — enables the optional transform and injection behavior.
 - **reasoning_content prefill** — the partial reasoning text to inject.
 - **Prefill model filter** — comma-separated model ID substrings for partial prefill.
@@ -76,6 +102,13 @@ On first load, if existing `KimiThinkingPrefill` settings are found, they are co
 - the old model filter becomes both the prefill and preserved-reasoning filters;
 - the legacy settings key is left untouched so rollback remains possible.
 
+The v2.1 settings migration is also non-destructive:
+
+- existing Silly Preserved Reasoning filters and toggles remain unchanged;
+- an existing settings object missing the preserved filter receives the previous safe default, `kimi,moonshot`;
+- the GLM Custom request control defaults off;
+- only a genuinely new installation receives `kimi,moonshot,glm` automatically.
+
 The settings UI is loaded relative to `import.meta.url`, so the physical extension folder name does not affect `settings.html` loading.
 
 ## Recommended preserved-reasoning setup
@@ -84,8 +117,9 @@ For preserved reasoning without partial prefill:
 
 ```text
 Enable Kimi/Moonshot thinking prefill: OFF
-Preserved reasoning model filter: kimi,moonshot
+Preserved reasoning model filter: kimi,moonshot,glm
 Send all prior assistant reasoning back to the API: ON
+Send clear_thinking:false for GLM Custom endpoints: OFF unless explicitly testing a compatible Custom provider
 Log decisions: OFF
 ```
 
@@ -106,7 +140,9 @@ For partial prefill you should see:
 ## Provider notes
 
 - Direct Moonshot/Kimi and compatible proxies must accept `reasoning_content` for preservation to work.
-- Proxy behavior is provider-dependent; confirm that the selected provider forwards the field as expected.
+- OpenRouter documents `reasoning_content` as an accepted alias for preserved reasoning.
+- Direct standard Z.AI requires `clear_thinking:false`; this extension can add it only through the opt-in Custom-source path.
+- Hapuppy and other proxy behavior is provider-dependent; confirm that the selected provider forwards the field as expected.
 - Claude is intentionally not handled because its native thinking uses structured signed blocks.
 
 ## Credits
